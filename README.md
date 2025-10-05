@@ -7,7 +7,7 @@ Fetch Estonian Youtube data to understand current trends for videomaking and cha
 
 Our data dictionary is "data dictionary.pdf".
 
-Our data sources are Initial csv files for seeds (found inside data.zip) and YouTube API.
+Our data sources are initial csv files for seeds (found inside data.zip) and YouTube API.
 
 The scripts for sourcing our data is in /scripts.
 
