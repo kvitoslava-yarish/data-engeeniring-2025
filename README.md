@@ -3,7 +3,7 @@
 ## Objective: one-sentence project goal
 Fetch Estonian Youtube data to understand current trends for videomaking and channel popularity for advertising.
 
-
+## Explanation
 
 Our data dictionary is "data dictionary.pdf".
 
