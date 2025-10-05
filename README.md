@@ -1,6 +1,6 @@
 # data-engeeniring-2025
 
-## Objective: one-sentence project goal
+## Objective
 Fetch Estonian Youtube data to understand current trends for videomaking and channel popularity for advertising.
 
 ## Explanation
