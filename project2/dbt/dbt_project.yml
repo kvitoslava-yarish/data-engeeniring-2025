@@ -1,0 +1,19 @@
+name: 'project2'
+version: '1.0.0'
+config-version: 2
+
+profile: 'project2'
+
+model-paths: ['models']
+target-path: 'target'
+clean-targets: ['target', 'dbt_packages']
+
+models:
+  project2:
+    +materialized: table
+    bronze:
+      +materialized: table
+    silver:
+      +materialized: table
+    gold:
+      +materialized: table
