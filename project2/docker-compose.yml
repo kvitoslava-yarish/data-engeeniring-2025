@@ -63,7 +63,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db     # 👈 the critical one
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
     ports:
@@ -85,7 +85,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db     # 👈 the critical one
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
     command: [ "airflow", "scheduler" ]
@@ -118,6 +118,15 @@ services:
     volumes:
       - ./dbt:/usr/app
     command: tail -f /dev/null
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client:latest
+    container_name: tabix
+    ports:
+      - "8124:80"
     depends_on:
       clickhouse:
         condition: service_healthy
