@@ -4,20 +4,17 @@ from airflow.utils.dates import days_ago
 from clickhouse_driver import Client
 from datetime import datetime
 import pandas as pd
-import time
-
 import requests
+import time
+import os
 
 
-CLICKHOUSE_HOST = "clickhouse"
-CLICKHOUSE_DB = "analytics"
-CLICKHOUSE_USER = "default"
-CLICKHOUSE_PASSWORD = "password"
-CLICKHOUSE_HTTP_PORT=8123
-CLICKHOUSE_TCP_PORT=9000
-
-API_KEY = ""
-
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
+CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "youtube")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
+CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT", "9000"))
+API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 def search_channels(query, max_results=50):
     url = "https://www.googleapis.com/youtube/v3/search"
@@ -26,13 +23,12 @@ def search_channels(query, max_results=50):
         "q": query,
         "type": "channel",
         "maxResults": max_results,
-        "regionCode": "EE",  # Estonia - affects result ranking
+        "regionCode": "EE",
         "relevanceLanguage": "et",
         "key": API_KEY
     }
-    response = requests.get(url, params=params)
-    data = response.json()
-    print(data)
+    r = requests.get(url, params=params)
+    data = r.json()
     channels = []
     for item in data.get("items", []):
         channels.append({
@@ -46,19 +42,19 @@ def search_channels(query, max_results=50):
 def get_channel_stats(channel_ids):
     stats = []
     for i in range(0, len(channel_ids), 50):
-        batch_ids = channel_ids[i:i + 50]
+        batch = channel_ids[i:i + 50]
         url = "https://www.googleapis.com/youtube/v3/channels"
         params = {
             "part": "statistics,snippet,topicDetails,brandingSettings,contentDetails",
-            "id": ",".join(batch_ids),
+            "id": ",".join(batch),
             "key": API_KEY
         }
-        response = requests.get(url, params=params)
-        data = response.json()
+        r = requests.get(url, params=params)
+        data = r.json()
 
         for item in data.get("items", []):
             snippet = item.get("snippet", {})
-            statistics = item.get("statistics", {})
+            stats_block = item.get("statistics", {})
             branding = item.get("brandingSettings", {}).get("channel", {})
             content = item.get("contentDetails", {}).get("relatedPlaylists", {})
 
@@ -67,105 +63,53 @@ def get_channel_stats(channel_ids):
                 "title": snippet.get("title", ""),
                 "description": snippet.get("description", "")[:500],
                 "customUrl": snippet.get("customUrl", ""),
-
-                # Statistics
-                "subscribers": int(statistics.get("subscriberCount", 0)),
-                "views": int(statistics.get("viewCount", 0)),
-                "videos": int(statistics.get("videoCount", 0)),
-                "hiddenSubscribers": statistics.get("hiddenSubscriberCount", False),
-
-                # Dates
+                "subscribers": int(stats_block.get("subscriberCount", 0)),
+                "views": int(stats_block.get("viewCount", 0)),
+                "videos": int(stats_block.get("videoCount", 0)),
+                "hiddenSubscribers": stats_block.get("hiddenSubscriberCount", False),
                 "publishedAt": snippet.get("publishedAt", ""),
-
-                # Location & Language
-                "country": snippet.get("country", ""),  # Sometimes set!
+                "country": snippet.get("country", ""),
                 "defaultLanguage": snippet.get("defaultLanguage", ""),
-
-                # Branding
-                "keywords": branding.get("keywords", ""),  # Channel keywords
-
-                # Content
-                "uploadsPlaylistId": content.get("uploads", ""),  # To get recent videos later
-
-                # Topics (what you already have)
+                "keywords": branding.get("keywords", ""),
+                "uploadsPlaylistId": content.get("uploads", ""),
                 "topics": ", ".join(item.get("topicDetails", {}).get("topicCategories", []))
             })
         time.sleep(0.1)
     return stats
 
 
-# --- MAIN ---
 def get_channels():
     keywords = [
-        "eesti", "eesti keeles", "eesti youtuber", "eesti vlogija",
-
-        "tallinn", "tartu", "pärnu", "narva",
-
-        "eesti vlog", "eesti gaming", "eesti taskuhääling", "eesti podcast",
-        "eesti muusika", "eesti komöödia", "eesti sketš",
-
-        "kuidas teha", "minu elu", "eesti keeles",
-
-        "eesti tech", "eesti tehnoloogia", "eesti programmeerimine",
-        "eesti toit", "eesti kokkamine", "eesti retseptid",
-        "eesti reis", "eesti loodus", "eesti ajalugu",
-        "eesti poliitika", "eesti uudised", "eesti sport",
-        "eesti jalgpall", "eesti korvpall", "eesti meelelahutus",
-        "eesti filmid", "eesti investeerimine", "eesti äri",
-        "eesti teadus", "eesti haridus", "eesti õppimine",
-
-        "eesti kultuur", "eesti kunst", "eesti teater",
-        "eesti rahvamuusika", "eesti laulud",
-
-        "mängime", "vaatame", "proovime",
-
-        "võrumaa", "saaremaa", "hiiumaa"
+        "eesti", "tallinn", "tartu", "pärnu", "eesti vlog",
+        "eesti gaming", "eesti podcast", "eesti muusika", "eesti sport"
     ]
 
     all_channels = []
     for kw in keywords:
-        print(f"Searching for keyword: {kw}")
-        found = search_channels(kw, max_results=50)  # max 50 per request
+        found = search_channels(kw)
         all_channels.extend(found)
         time.sleep(0.1)
 
-    # Collect all unique channel IDs
     channel_ids = list({c["channelId"] for c in all_channels})
-    print(f"Total unique channels found: {len(channel_ids)}")
-
-    # Get channel stats
     stats = get_channel_stats(channel_ids)
     df = pd.DataFrame(stats)
 
-    # Merge keyword info back in (optional, shows which keyword caught the channel)
     df_keywords = pd.DataFrame(all_channels).drop_duplicates("channelId")
     df = df.merge(df_keywords[["channelId", "query"]], on="channelId", how="left")
-
-    # Drop duplicates just in case
     df = df.drop_duplicates("channelId")
 
-    print(f"Initial channels: {len(df)}")
-
-    # 1. Remove channels with 0 videos
-    df = df[df['videos'] > 0]
-    print(f"After removing 0 videos: {len(df)}")
-
-    df = df[~df['title'].str.contains("topic", na=False)]
-
-    df = df.query('videos <= 1000')
-
-    # 2. Filter by country - keep only EE or null/empty
+    df = df[df["videos"] > 0]
+    df = df[~df["title"].str.contains("topic", na=False)]
+    df = df.query("videos <= 1000")
     df = df[
-        (df['country'].str.upper() == 'EE') |
-        (df['country'].isna()) |
-        (df['country'] == '')
-        ]
-
+        (df["country"].str.upper() == "EE") |
+        (df["country"].isna()) |
+        (df["country"] == "")
+    ]
     return df[:100]
 
 
 def insert_channels_to_clickhouse(**context):
-    """Insert collected channel data into ClickHouse."""
     client = Client(
         host=CLICKHOUSE_HOST,
         port=CLICKHOUSE_TCP_PORT,
@@ -174,9 +118,9 @@ def insert_channels_to_clickhouse(**context):
         database=CLICKHOUSE_DB
     )
 
-    # Ensure table exists
     client.execute("""
-        CREATE TABLE IF NOT EXISTS channels (
+        CREATE TABLE IF NOT EXISTS raw_youtube.channels
+        (
             ts DateTime DEFAULT now(),
             channelId String,
             title String,
@@ -191,15 +135,17 @@ def insert_channels_to_clickhouse(**context):
             defaultLanguage String,
             keywords String,
             uploadsPlaylistId String,
-            topics String
-        ) ENGINE = ReplacingMergeTree()
-        ORDER BY (ts, channelId)
+            topics String,
+            loaded_at Date DEFAULT today()
+        )
+        ENGINE = ReplacingMergeTree(ts)
+        PARTITION BY toYYYYMM(loaded_at)
+        ORDER BY (channelId, loaded_at)
+        TTL loaded_at + INTERVAL 90 DAY
+        SETTINGS index_granularity = 8192
     """)
 
-
-    df = get_channels()
-
-    df = df.fillna("")
+    df = get_channels().fillna("")
     df["ts"] = datetime.now()
 
     rows = [
@@ -223,9 +169,8 @@ def insert_channels_to_clickhouse(**context):
         for _, row in df.iterrows()
     ]
 
-    # Insert data
     client.execute("""
-        INSERT INTO channels (
+        INSERT INTO raw_youtube.channels (
             ts, channelId, title, description, customUrl,
             subscribers, views, videos, hiddenSubscribers,
             publishedAt, country, defaultLanguage,
@@ -233,15 +178,16 @@ def insert_channels_to_clickhouse(**context):
         ) VALUES
     """, rows)
 
-    print(f"Inserted {len(rows)} rows into ClickHouse")
+    print(f"Inserted {len(rows)} rows into youtube.raw_youtube.channels")
 
 
 with DAG(
     dag_id="channels_to_clickhouse",
     start_date=days_ago(1),
-    schedule_interval="0 0 * * *",  # every day
+    schedule_interval="0 0 * * *",
     catchup=False,
-    max_active_runs=1
+    max_active_runs=1,
+    tags=["youtube", "raw"]
 ) as dag:
 
     insert_task = PythonOperator(
@@ -249,6 +195,3 @@ with DAG(
         python_callable=insert_channels_to_clickhouse,
         provide_context=True,
     )
-
-
-

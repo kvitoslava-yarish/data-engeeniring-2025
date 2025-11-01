@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: stg_channels
+    description: "Cleaned, deduplicated daily snapshots of YouTube channels."
+    columns:
+      - name: channel_id
+        description: "Unique channel identifier from YouTube."
+        tests:
+          - not_null
+          - unique:
+              config:
+                severity: warn
+      - name: date_key
+        description: "Snapshot date (1 row per channel per day)."
+        tests: [not_null]
+      - name: loaded_at
+        description: "Exact timestamp of when the record was fetched."
+        tests: [not_null]
+      - name: total_views
+        description: "Total views of the channel."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              expression: "total_views >= 0"
+              config:
+                severity: warn
+      - name: subscribers
+        description: "Subscriber count of the channel."
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "subscribers >= 0"
+              config:
+                severity: warn
+
+  - name: stg_videos
+    description: "Cleaned, deduplicated daily snapshots of YouTube videos."
+    columns:
+      - name: video_id
+        description: "Unique video identifier from YouTube."
+        tests:
+          - not_null
+          - unique:
+              config:
+                severity: warn
+      - name: channel_id
+        description: "Channel associated with this video."
+        tests: [not_null]
+      - name: date_key
+        description: "Snapshot date (1 row per video per day)."
+        tests: [not_null]
+      - name: view_count
+        description: "Total views recorded at this snapshot."
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "view_count >= 0"
+              config:
+                severity: warn
+      - name: like_count
+        description: "Likes recorded at this snapshot."
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "like_count >= 0"
+              config:
+                severity: warn
+      - name: comment_count
+        description: "Comments recorded at this snapshot."
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "comment_count >= 0"
+              config:
+                severity: warn

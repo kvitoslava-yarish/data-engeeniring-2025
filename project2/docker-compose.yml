@@ -17,7 +17,7 @@ services:
       TZ: ${TZ}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
-      CLICKHOUSE_DB: analytics
+      CLICKHOUSE_DB: youtube
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse/init:/docker-entrypoint-initdb.d
@@ -35,11 +35,13 @@ services:
       context: ./airflow
     container_name: airflow-init
     entrypoint: /bin/bash
-    command: -c "airflow db init && \
+    command: -c "chown -R ${AIRFLOW_UID}:${AIRFLOW_GID} /opt/airflow/logs && \
+      chmod -R 777 /opt/airflow/logs && \
+      airflow db migrate && \
       airflow users create --role Admin --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PWD} --firstname Admin --lastname User --email ${AIRFLOW_ADMIN_EMAIL}"
     environment:
       <<: *airflow_env
-#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    user: "0:0"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -90,7 +92,7 @@ services:
       - ./dbt:/opt/dbt
     command: [ "airflow", "scheduler" ]
     healthcheck:
-      test: [ "CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)" ]
+      test: [ "CMD-SHELL"]#, "airflow jobs check --job-type SchedulerJob --hostname ${HOSTNAME}" ]
       interval: 10s
       timeout: 10s
       retries: 20
