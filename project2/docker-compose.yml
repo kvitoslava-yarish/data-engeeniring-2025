@@ -1,0 +1,139 @@
+version: "3.9"
+
+x-airflow-env: &airflow_env
+  AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES}
+  AIRFLOW__WEBSERVER__RBAC: ${AIRFLOW__WEBSERVER__RBAC}
+  AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+  AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+  AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+  TZ: ${TZ}
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: clickhouse
+    environment:
+      TZ: ${TZ}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: analytics
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/init:/docker-entrypoint-initdb.d
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  airflow-init:
+    build:
+      context: ./airflow
+    container_name: airflow-init
+    entrypoint: /bin/bash
+    command: -c "airflow db init && \
+      airflow users create --role Admin --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PWD} --firstname Admin --lastname User --email ${AIRFLOW_ADMIN_EMAIL}"
+    environment:
+      <<: *airflow_env
+#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/airflow.db:/opt/airflow/airflow.db     # 👈 the critical one
+      - ./airflow/include:/opt/airflow/include
+      - ./dbt:/opt/dbt
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  airflow-webserver:
+    build:
+      context: ./airflow
+    container_name: airflow-webserver
+    restart: always
+    environment:
+      <<: *airflow_env
+#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
+      - ./airflow/include:/opt/airflow/include
+      - ./dbt:/opt/dbt
+    ports:
+      - "8080:8080"
+    command: [ "airflow", "webserver" ]
+    depends_on:
+      airflow-scheduler:
+        condition: service_started
+
+  airflow-scheduler:
+    build:
+      context: ./airflow
+    container_name: airflow-scheduler
+    restart: always
+    environment:
+      <<: *airflow_env
+#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
+      - ./airflow/include:/opt/airflow/include
+      - ./dbt:/opt/dbt
+    command: [ "airflow", "scheduler" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)" ]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+
+  dbt:
+    build:
+      context: ./dbt
+    container_name: dbt
+    working_dir: /usr/app
+    environment:
+      TZ: ${TZ}
+      DBT_TARGET: ${DBT_TARGET}
+      DBT_SCHEMA: ${DBT_SCHEMA}
+      DBT_HOST: ${DBT_HOST}
+      DBT_PORT: ${DBT_PORT}
+      DBT_USER: ${DBT_USER}
+      DBT_PASSWORD: ${DBT_PASSWORD}
+      DBT_DATABASE: ${DBT_DATABASE}
+      DBT_PROFILES_DIR: /usr/app/profiles
+    volumes:
+      - ./dbt:/usr/app
+    command: tail -f /dev/null
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client:latest
+    container_name: tabix
+    ports:
+      - "8124:80"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+
+volumes:
+  clickhouse_data:
+  airflow_dags:
+  airflow_logs:
+  airflow_plugins:
