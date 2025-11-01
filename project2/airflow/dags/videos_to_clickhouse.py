@@ -10,7 +10,7 @@ import requests
 
 import logging
 
-# Set up logging at the top of your file (after imports)
+# Logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -284,7 +284,7 @@ def insert_batch_to_clickhouse(client, videos_data, batch_number):
 with DAG(
     dag_id="videos_to_clickhouse",
     start_date=days_ago(1),
-    schedule_interval="*/5 * * * *",  # every third hour
+    schedule_interval="0 0 * * *",  # every day
     catchup=False,
     max_active_runs=1
 ) as dag:
@@ -294,3 +294,4 @@ with DAG(
         python_callable=insert_videos_to_clickhouse,
         provide_context=True,
     )
+
