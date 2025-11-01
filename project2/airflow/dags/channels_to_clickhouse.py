@@ -161,7 +161,7 @@ def get_channels():
         (df['country'] == '')
         ]
 
-    return df
+    return df[:100]
 
 
 def insert_channels_to_clickhouse(**context):
@@ -239,7 +239,7 @@ def insert_channels_to_clickhouse(**context):
 with DAG(
     dag_id="channels_to_clickhouse",
     start_date=days_ago(1),
-    schedule_interval="0 0 * * *",  # every hour
+    schedule_interval="0 0 * * *",  # every day
     catchup=False,
     max_active_runs=1
 ) as dag:
@@ -249,5 +249,6 @@ with DAG(
         python_callable=insert_channels_to_clickhouse,
         provide_context=True,
     )
+
 
 
