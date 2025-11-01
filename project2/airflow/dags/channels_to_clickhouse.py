@@ -9,12 +9,13 @@ import time
 import os
 
 
-CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
-CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "youtube")
-CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
-CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
-CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT", "9000"))
-API_KEY = os.getenv("YOUTUBE_API_KEY")
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST")
+CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
+CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT"))
+API_KEY = "AIzaSyA3DBoFW0B6sFeF4JMtRkTWZ2Wd_LsrLXo"
+
 
 def search_channels(query, max_results=50):
     url = "https://www.googleapis.com/youtube/v3/search"
@@ -23,12 +24,13 @@ def search_channels(query, max_results=50):
         "q": query,
         "type": "channel",
         "maxResults": max_results,
-        "regionCode": "EE",
+        "regionCode": "EE",  # Estonia - affects result ranking
         "relevanceLanguage": "et",
         "key": API_KEY
     }
-    r = requests.get(url, params=params)
-    data = r.json()
+    response = requests.get(url, params=params)
+    data = response.json()
+    print(data)
     channels = []
     for item in data.get("items", []):
         channels.append({

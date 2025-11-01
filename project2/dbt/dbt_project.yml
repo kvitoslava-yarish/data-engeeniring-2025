@@ -11,9 +11,12 @@ clean-targets: ['target', 'dbt_packages']
 models:
   project2:
     +materialized: table
-    bronze:
-      +materialized: table
+
     silver:
-      +materialized: table
+      +schema: staging_youtube
+      +tags: ['silver']
+
     gold:
+      +schema: analytics_youtube
       +materialized: table
+      +tags: ['gold']

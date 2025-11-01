@@ -18,14 +18,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
-CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "youtube")
-CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
-CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
-CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT", "9000"))
-API_KEY = os.getenv("YOUTUBE_API_KEY")
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST")
+CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
+CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT"))
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 
+API_KEY = "AIzaSyA3DBoFW0B6sFeF4JMtRkTWZ2Wd_LsrLXo"
 
 def get_video_ids_from_playlist(playlist_id, api_key):
     logger.info(f"Fetching video IDs from playlist {playlist_id}")
@@ -39,6 +39,7 @@ def get_video_ids_from_playlist(playlist_id, api_key):
     }
     while True:
         resp = requests.get(url, params=params).json()
+
         for item in resp.get("items", []):
             video_ids.append(item["contentDetails"]["videoId"])
         if "nextPageToken" in resp:

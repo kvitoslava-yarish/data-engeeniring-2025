@@ -41,6 +41,11 @@ services:
       airflow users create --role Admin --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PWD} --firstname Admin --lastname User --email ${AIRFLOW_ADMIN_EMAIL}"
     environment:
       <<: *airflow_env
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
     user: "0:0"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -60,6 +65,11 @@ services:
     restart: always
     environment:
       <<: *airflow_env
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
 #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -82,6 +92,11 @@ services:
     restart: always
     environment:
       <<: *airflow_env
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
 #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     volumes:
       - ./airflow/dags:/opt/airflow/dags

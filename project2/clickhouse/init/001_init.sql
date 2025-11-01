@@ -1,8 +1,6 @@
-CREATE DATABASE IF NOT EXISTS youtube;
+CREATE DATABASE IF NOT EXISTS raw_youtube;
 
-CREATE SCHEMA IF NOT EXISTS youtube.raw_youtube;
-
-CREATE TABLE IF NOT EXISTS youtube.raw_youtube.videos
+CREATE TABLE IF NOT EXISTS raw_youtube.videos
 (
     ts DateTime DEFAULT now(),
     videoId String,
@@ -30,7 +28,7 @@ ORDER BY (videoId, loaded_at)
 TTL loaded_at + INTERVAL 90 DAY
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE IF NOT EXISTS youtube.raw_youtube.channels
+CREATE TABLE IF NOT EXISTS raw_youtube.channels
 (
     ts DateTime DEFAULT now(),
     channelId String,
@@ -55,5 +53,7 @@ ORDER BY (channelId, loaded_at)
 TTL loaded_at + INTERVAL 90 DAY
 SETTINGS index_granularity = 8192;
 
-CREATE SCHEMA IF NOT EXISTS youtube.staging_youtube;
-CREATE SCHEMA IF NOT EXISTS youtube.youtube_analytics;
+
+CREATE DATABASE IF NOT EXISTS staging_youtube;
+
+CREATE DATABASE IF NOT EXISTS analytics_youtube;
