@@ -24,6 +24,11 @@ models:
       +materialized: view
       +tags: ['gold']
 
+    analytics:
+      +database: youtube_queries        # 👈 this one
+      +materialized: view               # or 'table' if you prefer
+      +tags: [ 'analytics' ]
+
 seeds:
   project2:
     +database: youtube_analytics

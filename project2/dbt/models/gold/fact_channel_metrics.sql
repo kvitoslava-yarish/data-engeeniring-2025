@@ -1,4 +1,5 @@
 {{ config(
+    database = 'youtube_analytics',
     materialized='incremental',
     unique_key='id'
 ) }}
