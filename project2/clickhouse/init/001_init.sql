@@ -53,5 +53,4 @@ ORDER BY (channelId, loaded_at)
 TTL loaded_at + INTERVAL 90 DAY
 SETTINGS index_granularity = 8192;
 
-CREATE DATABASE youtube_staging;
 CREATE DATABASE youtube_analytics;

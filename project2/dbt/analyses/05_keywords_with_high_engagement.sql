@@ -9,7 +9,7 @@ WITH latest_video_metrics AS (
         (COALESCE(like_count, 0) + COALESCE(comment_count, 0)) AS total_interactions,
         ROW_NUMBER() OVER(PARTITION BY video_sk ORDER BY date_key DESC) AS rn
     FROM {{ ref('fact_video_performance') }}
-    WHERE view_count > 0 -- Avoid divide-by-zero
+    WHERE view_count > 0
 ),
 video_tag_engagement AS (
     SELECT
@@ -30,6 +30,6 @@ JOIN {{ ref('dim_tag') }} AS dt
 WHERE
     bvt.is_current = true
 GROUP BY dt.tag_name
-HAVING video_count >= 10 -- Filter out tags that appear on too few videos
+HAVING video_count >= 10
 ORDER BY avg_engagement_rate DESC
 LIMIT 10

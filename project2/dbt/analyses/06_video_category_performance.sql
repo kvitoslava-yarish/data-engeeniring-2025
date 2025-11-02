@@ -26,7 +26,7 @@ videos_with_duration_sec AS (
 SELECT
     vds.category_name,
     AVG(vds.duration_seconds) / 60 AS avg_duration_minutes,
-    SUM(lvm.view_count) AS total_views, -- Changed to SUM for consistency with Q2
+    SUM(lvm.view_count) AS total_views,
     SUM(lvm.like_count) AS total_likes,
     COUNT(DISTINCT vds.video_sk) AS video_count
 FROM latest_video_metrics AS lvm
@@ -35,5 +35,5 @@ JOIN videos_with_duration_sec AS vds
 WHERE
     lvm.rn = 1
 GROUP BY vds.category_name
-HAVING video_count >= 50 -- Ensure sufficient data points per category
+HAVING video_count >= 50
 ORDER BY total_views DESC
