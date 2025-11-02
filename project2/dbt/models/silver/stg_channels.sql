@@ -6,20 +6,20 @@
 ) }}
 
 {% if is_incremental() %}
-  {% set max_ts_query %}
-    SELECT max(ts) AS max_ts FROM {{ this }}
-  {% endset %}
-  {% set results = run_query(max_ts_query) %}
-  {% if results and results[0]['max_ts'] is not none %}
+{% set max_ts_query %}
+SELECT max(loaded_at) AS max_ts FROM {{ this }}
+    {% endset %}
+    {% set results = run_query(max_ts_query) %}
+    {% if results and results[0]['max_ts'] is not none %}
     {% set max_ts = results[0]['max_ts'] %}
-  {% else %}
+    {% else %}
     {% set max_ts = '1970-01-01 00:00:00' %}
-  {% endif %}
-{% else %}
-  {% set max_ts = '1970-01-01 00:00:00' %}
-{% endif %}
+    {% endif %}
+    {% else %}
+    {% set max_ts = '1970-01-01 00:00:00' %}
+    {% endif %}
 
-WITH daily_ranked AS (
+    WITH daily_ranked AS (
 
     SELECT
         channelId AS channel_id,
@@ -43,8 +43,7 @@ WITH daily_ranked AS (
             ORDER BY ts DESC
         ) AS rn
     FROM {{ source('raw_youtube', 'channels') }}
-    WHERE ts > toDateTime('{{ max_ts }}')
-
+    WHERE ts > parseDateTimeBestEffort('{{ max_ts }}')
 )
 
 SELECT

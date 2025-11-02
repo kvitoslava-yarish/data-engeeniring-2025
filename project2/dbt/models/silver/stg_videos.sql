@@ -6,31 +6,31 @@
 ) }}
 
 {% if is_incremental() %}
-  {% set relation_exists_query %}
-    SELECT count() > 0 AS exists
-    FROM system.tables
-    WHERE database = currentDatabase()
-      AND name = '{{ this.identifier }}'
-  {% endset %}
-  {% set exists = run_query(relation_exists_query) %}
-  {% if exists and exists[0]['exists'] == 1 %}
-    {% set max_ts_query %}
-      SELECT max(loaded_at) AS max_ts FROM {{ this }}
+{% set relation_exists_query %}
+SELECT count() > 0 AS exists
+FROM system.tables
+WHERE database = currentDatabase()
+  AND name = '{{ this.identifier }}'
+{% endset %}
+{% set exists = run_query(relation_exists_query) %}
+{% if exists and exists[0]['exists'] == 1 %}
+{% set max_ts_query %}
+SELECT max(loaded_at) AS max_ts FROM {{ this }}
     {% endset %}
     {% set results = run_query(max_ts_query) %}
     {% if results and results[0]['max_ts'] is not none %}
-      {% set max_ts = results[0]['max_ts'] %}
+    {% set max_ts = results[0]['max_ts'] %}
     {% else %}
-      {% set max_ts = '1970-01-01 00:00:00' %}
-    {% endif %}
-  {% else %}
     {% set max_ts = '1970-01-01 00:00:00' %}
-  {% endif %}
-{% else %}
-  {% set max_ts = '1970-01-01 00:00:00' %}
-{% endif %}
+    {% endif %}
+    {% else %}
+    {% set max_ts = '1970-01-01 00:00:00' %}
+    {% endif %}
+    {% else %}
+    {% set max_ts = '1970-01-01 00:00:00' %}
+    {% endif %}
 
-WITH ranked AS (
+    WITH ranked AS (
 
     SELECT
         videoId AS video_id,
@@ -57,7 +57,7 @@ WITH ranked AS (
             ORDER BY ts DESC
         ) AS rn
     FROM {{ source('raw_youtube', 'videos') }}
-    WHERE ts > toDateTime('{{ max_ts }}')
+    WHERE ts > parseDateTimeBestEffort('{{ max_ts }}')
 
 )
 

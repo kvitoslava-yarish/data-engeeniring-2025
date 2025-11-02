@@ -4,6 +4,9 @@ config-version: 2
 
 profile: 'project2'
 
+seed-paths: ['seeds']
+snapshot-paths: ['snapshots']
+
 model-paths: ['models']
 target-path: 'target'
 clean-targets: ['target', 'dbt_packages']
@@ -20,3 +23,11 @@ models:
       +schema: analytics_youtube
       +materialized: table
       +tags: ['gold']
+
+seeds:
+  project2:
+    +schema: analytics_youtube
+
+snapshots:
+  project2:
+    +target_schema: analytics_youtube

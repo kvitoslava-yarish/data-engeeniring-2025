@@ -117,6 +117,29 @@ services:
       clickhouse:
         condition: service_healthy
 
+  dbt-init:
+    build:
+      context: ./dbt
+    container_name: dbt-init
+    working_dir: /usr/app
+    entrypoint: /bin/bash
+    command: -c "dbt deps && dbt build"
+    environment:
+      TZ: ${TZ}
+      DBT_TARGET: ${DBT_TARGET}
+      DBT_SCHEMA: ${DBT_SCHEMA}
+      DBT_HOST: ${DBT_HOST}
+      DBT_PORT: ${DBT_PORT}
+      DBT_USER: ${DBT_USER}
+      DBT_PASSWORD: ${DBT_PASSWORD}
+      DBT_DATABASE: ${DBT_DATABASE}
+      DBT_PROFILES_DIR: /usr/app/profiles
+    volumes:
+      - ./dbt:/usr/app
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
   dbt:
     build:
       context: ./dbt
@@ -136,8 +159,8 @@ services:
       - ./dbt:/usr/app
     command: tail -f /dev/null
     depends_on:
-      clickhouse:
-        condition: service_healthy
+      dbt-init:
+        condition: service_completed_successfully
 
   tabix:
     image: spoonest/clickhouse-tabix-web-client:latest
