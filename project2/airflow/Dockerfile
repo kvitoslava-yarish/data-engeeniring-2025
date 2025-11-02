@@ -10,3 +10,5 @@ RUN pip install --no-cache-dir -r /requirements.txt
 
 ENV AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
 ENV AIRFLOW__CORE__ENABLE_XCOM_PICKLING=True
+RUN pip install --no-cache-dir dbt-core dbt-clickhouse
+RUN mkdir -p /opt/dbt/target && chmod -R 777 /opt/dbt

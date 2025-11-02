@@ -2,7 +2,7 @@
 
 {{
     config(
-        target_schema='analytics_youtube',
+        target_schema='youtube_analytics',
         strategy='check',
         unique_key='channel_sk || keyword_id',
         check_cols=['channel_sk', 'keyword_id', 'loaded_at'],

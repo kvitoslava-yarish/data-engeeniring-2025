@@ -1,5 +1,4 @@
 {{ config(
-    schema='staging_youtube',
     materialized='incremental',
     unique_key='channel_id || date_key',
     on_schema_change='sync_all_columns'

@@ -7,6 +7,7 @@ x-airflow-env: &airflow_env
   AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
   AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
   AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+  AIRFLOW__CORE__ENABLE_XCOM_PICKLING: "true"
   TZ: ${TZ}
 
 services:
@@ -51,7 +52,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db     # 👈 the critical one
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
     depends_on:
@@ -70,7 +71,7 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
-#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -78,9 +79,12 @@ services:
       - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
+    command: >
+      bash -c "mkdir -p /opt/dbt/target &&
+               chmod -R 777 /opt/dbt/target &&
+               exec airflow webserver"
     ports:
       - "8080:8080"
-    command: [ "airflow", "webserver" ]
     depends_on:
       airflow-scheduler:
         condition: service_started
@@ -97,7 +101,7 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
-#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -105,9 +109,12 @@ services:
       - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
-    command: [ "airflow", "scheduler" ]
+    command: >
+      bash -c "mkdir -p /opt/dbt/target &&
+               chmod -R 777 /opt/dbt/target &&
+               exec airflow scheduler"
     healthcheck:
-      test: [ "CMD-SHELL"]#, "airflow jobs check --job-type SchedulerJob --hostname ${HOSTNAME}" ]
+      test: [ "CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)" ]
       interval: 10s
       timeout: 10s
       retries: 20
@@ -116,6 +123,7 @@ services:
         condition: service_completed_successfully
       clickhouse:
         condition: service_healthy
+
 
   dbt-init:
     build:
@@ -157,6 +165,8 @@ services:
       DBT_PROFILES_DIR: /usr/app/profiles
     volumes:
       - ./dbt:/usr/app
+    ports:
+      - "8081:8081"
     command: tail -f /dev/null
     depends_on:
       dbt-init:

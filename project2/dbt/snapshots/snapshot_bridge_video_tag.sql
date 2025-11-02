@@ -2,8 +2,8 @@
 
 {{
     config(
-      target_schema='analytics_youtube_snapshot',
-      unique_key=['video_sk', 'tag_id'],
+      target_schema='youtube_analytics',
+      unique_key="video_sk || '-' || tag_id",
       strategy='timestamp',
       updated_at='loaded_at',
       invalidate_hard_deletes=True
