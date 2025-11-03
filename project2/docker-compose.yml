@@ -18,16 +18,36 @@ services:
       TZ: ${TZ}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
-      CLICKHOUSE_DB: youtube
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse/init:/docker-entrypoint-initdb.d
     ports:
       - "8123:8123"
       - "9000:9000"
+    networks: [airflow_net]
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
       interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    networks: [airflow_net]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U airflow -d airflow" ]
+      interval: 5s
       timeout: 5s
       retries: 10
 
@@ -35,27 +55,35 @@ services:
     build:
       context: ./airflow
     container_name: airflow-init
-    entrypoint: /bin/bash
-    command: -c "chown -R ${AIRFLOW_UID}:${AIRFLOW_GID} /opt/airflow/logs && \
-      chmod -R 777 /opt/airflow/logs && \
-      airflow db migrate && \
+    command: >
+      bash -c "airflow db migrate && 
       airflow users create --role Admin --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PWD} --firstname Admin --lastname User --email ${AIRFLOW_ADMIN_EMAIL}"
     environment:
       <<: *airflow_env
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW_FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      AIRFLOW_SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER}
+      AIRFLOW_ADMIN_PWD: ${AIRFLOW_ADMIN_PWD}
+      AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL}
       CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
     user: "0:0"
+    networks: [airflow_net]
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
     depends_on:
+      postgres:
+        condition: service_healthy
       clickhouse:
         condition: service_healthy
 
@@ -66,23 +94,23 @@ services:
     restart: always
     environment:
       <<: *airflow_env
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
       CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
-    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    networks: [airflow_net]
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
-    command: >
-      bash -c "mkdir -p /opt/dbt/target &&
-               chmod -R 777 /opt/dbt/target &&
-               exec airflow webserver"
+    command: ["webserver"]
     ports:
       - "8080:8080"
     depends_on:
@@ -96,23 +124,23 @@ services:
     restart: always
     environment:
       <<: *airflow_env
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
       CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
-    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    networks: [airflow_net]
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
-    command: >
-      bash -c "mkdir -p /opt/dbt/target &&
-               chmod -R 777 /opt/dbt/target &&
-               exec airflow scheduler"
+    command: [ "scheduler"]
     healthcheck:
       test: [ "CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)" ]
       interval: 10s
@@ -128,49 +156,49 @@ services:
   dbt-init:
     build:
       context: ./dbt
+    image: local/dbt-clickhouse:latest   # shared image Airflow will use
     container_name: dbt-init
     working_dir: /usr/app
     entrypoint: /bin/bash
-    command: -c "dbt deps && dbt build"
+    command: -c "dbt deps && dbt debug --profiles-dir /usr/app/profiles"
     environment:
       TZ: ${TZ}
-      DBT_TARGET: ${DBT_TARGET}
-      DBT_SCHEMA: ${DBT_SCHEMA}
+      DBT_PROFILES_DIR: /usr/app/profiles
       DBT_HOST: ${DBT_HOST}
       DBT_PORT: ${DBT_PORT}
       DBT_USER: ${DBT_USER}
       DBT_PASSWORD: ${DBT_PASSWORD}
+      DBT_SCHEMA: ${DBT_SCHEMA}
       DBT_DATABASE: ${DBT_DATABASE}
-      DBT_PROFILES_DIR: /usr/app/profiles
     volumes:
       - ./dbt:/usr/app
     depends_on:
       clickhouse:
         condition: service_healthy
 
-  dbt:
-    build:
-      context: ./dbt
-    container_name: dbt
-    working_dir: /usr/app
-    environment:
-      TZ: ${TZ}
-      DBT_TARGET: ${DBT_TARGET}
-      DBT_SCHEMA: ${DBT_SCHEMA}
-      DBT_HOST: ${DBT_HOST}
-      DBT_PORT: ${DBT_PORT}
-      DBT_USER: ${DBT_USER}
-      DBT_PASSWORD: ${DBT_PASSWORD}
-      DBT_DATABASE: ${DBT_DATABASE}
-      DBT_PROFILES_DIR: /usr/app/profiles
-    volumes:
-      - ./dbt:/usr/app
-    ports:
-      - "8081:8081"
-    command: tail -f /dev/null
-    depends_on:
-      dbt-init:
-        condition: service_completed_successfully
+#  dbt:
+#    build:
+#      context: ./dbt
+#    container_name: dbt
+#    working_dir: /usr/app
+#    environment:
+#      TZ: ${TZ}
+#      DBT_TARGET: ${DBT_TARGET}
+#      DBT_SCHEMA: ${DBT_SCHEMA}
+#      DBT_HOST: ${DBT_HOST}
+#      DBT_PORT: ${DBT_PORT}
+#      DBT_USER: ${DBT_USER}
+#      DBT_PASSWORD: ${DBT_PASSWORD}
+#      DBT_DATABASE: ${DBT_DATABASE}
+#      DBT_PROFILES_DIR: /usr/app/profiles
+#    volumes:
+#      - ./dbt:/usr/app
+#    ports:
+#      - "8081:8081"
+#    command: tail -f /dev/null
+#    depends_on:
+#      dbt-init:
+#        condition: service_completed_successfully
 
   tabix:
     image: spoonest/clickhouse-tabix-web-client:latest
@@ -181,9 +209,13 @@ services:
       clickhouse:
         condition: service_healthy
 
+networks:
+  airflow_net:
+    driver: bridge
 
 volumes:
   clickhouse_data:
+  postgres_data:
   airflow_dags:
   airflow_logs:
   airflow_plugins:

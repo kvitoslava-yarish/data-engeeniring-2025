@@ -1,38 +1,14 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
-import subprocess
+from docker.types import Mount
 import os
 
-DBT_PROJECT_DIR = "/opt/dbt"
+DBT_IMAGE = "local/dbt-clickhouse:latest"
+DBT_PROJECT_DIR = "/usr/app"
 DBT_PROFILES_DIR = f"{DBT_PROJECT_DIR}/profiles"
-
-def run_dbt_command(command: str):
-    print(f"Running dbt command: {command}")
-    result = subprocess.run(
-        command,
-        shell=True,
-        cwd=DBT_PROJECT_DIR,
-        capture_output=True,
-        text=True
-    )
-    print("STDOUT:\n", result.stdout)
-    print("STDERR:\n", result.stderr)
-    if result.returncode != 0:
-        raise Exception(f"dbt command failed: {command}")
-    print("dbt command completed successfully.")
-
-
-def run_dbt_silver():
-    run_dbt_command(f"dbt run --select silver --profiles-dir {DBT_PROFILES_DIR}")
-
-def run_dbt_gold():
-    run_dbt_command(f"dbt run --select gold --profiles-dir {DBT_PROFILES_DIR}")
-
-def test_dbt_gold():
-    run_dbt_command(f"dbt test --select gold --profiles-dir {DBT_PROFILES_DIR}")
-
+HOST_DBT_PATH = "/home/kyarish/Tartu/DE/data-engeeniring-2025/project2/dbt"
 
 with DAG(
     dag_id="dbt_silver_gold_daily",
@@ -41,22 +17,51 @@ with DAG(
     catchup=False,
     max_active_runs=1,
     dagrun_timeout=timedelta(hours=1),
-    tags=["youtube", "dbt", "silver", "gold"],
+    tags=["dbt", "clickhouse", "silver", "gold"],
 ) as dag:
 
-    run_silver_task = PythonOperator(
-        task_id="run_dbt_silver",
-        python_callable=run_dbt_silver,
+    run_silver = DockerOperator(
+        task_id="dbt_run_silver",
+        image=DBT_IMAGE,
+        command=f"dbt run --select silver --profiles-dir {DBT_PROFILES_DIR}",
+        docker_url="unix://var/run/docker.sock",
+        network_mode="bridge",
+        mounts=[
+            Mount(source=HOST_DBT_PATH, target=DBT_PROJECT_DIR, type="bind")
+        ],
+        environment={
+            "DBT_PROFILES_DIR": DBT_PROFILES_DIR,
+            "DBT_HOST": "clickhouse",
+            "DBT_USER": "default",
+            "DBT_PASSWORD": "password",
+            "DBT_SCHEMA": "analytics",
+        },
+        auto_remove=True,
     )
 
-    run_gold_task = PythonOperator(
-        task_id="run_dbt_gold",
-        python_callable=run_dbt_gold,
+    run_gold = DockerOperator(
+        task_id="dbt_run_gold",
+        image=DBT_IMAGE,
+        command=f"dbt run --select gold --profiles-dir {DBT_PROFILES_DIR}",
+        docker_url="unix://var/run/docker.sock",
+        network_mode="bridge",
+        mounts=[
+            Mount(source=HOST_DBT_PATH, target=DBT_PROJECT_DIR, type="bind")
+        ],
+        auto_remove=True,
     )
 
-    test_gold_task = PythonOperator(
-        task_id="test_dbt_gold",
-        python_callable=test_dbt_gold,
+    test_gold = DockerOperator(
+        task_id="dbt_test_gold",
+        image=DBT_IMAGE,
+        command=f"dbt test --select gold --profiles-dir {DBT_PROFILES_DIR}",
+        docker_url="unix://var/run/docker.sock",
+        network_mode="bridge",
+        mounts=[
+            Mount(source=HOST_DBT_PATH, target=DBT_PROJECT_DIR, type="bind")
+        ],
+        auto_remove=True,
     )
 
-    run_silver_task >> run_gold_task >> test_gold_task
+    run_silver >> run_gold >> test_gold
+
