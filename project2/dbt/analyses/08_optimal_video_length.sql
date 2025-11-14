@@ -1,5 +1,6 @@
 {{ config(
-    materialized = 'view'
+    materialized = 'view',
+    database = 'youtube_queries'
 ) }}
 
 WITH latest_video_metrics AS (
@@ -9,7 +10,7 @@ WITH latest_video_metrics AS (
         (COALESCE(like_count, 0) + COALESCE(comment_count, 0)) AS total_interactions,
         ROW_NUMBER() OVER(PARTITION BY video_sk ORDER BY date_key DESC) AS rn
     FROM {{ ref('fact_video_performance') }}
-    WHERE view_count > 0
+    WHERE view_count > 0 -- Avoid divide-by-zero
 ),
 videos_with_duration_sec AS (
     SELECT

@@ -1,3 +1,8 @@
+{{ config(
+    materialized = 'view',
+    database = 'youtube_queries'
+) }}
+
 WITH latest_channel_metrics AS (
     SELECT
         channel_sk,
