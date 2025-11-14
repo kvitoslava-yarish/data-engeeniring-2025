@@ -16,24 +16,24 @@ models:
     +materialized: table
 
     silver:
-      +database: youtube_staging
+      +database: youtube_silver
       +materialized: table
       +tags: ['silver']
 
     gold:
-      +database: youtube_analytics
+      +database: youtube_gold
       +materialized: view
       +tags: ['gold']
 
     analytics:
-      +database: youtube_queries        # 👈 this one
-      +materialized: view               # or 'table' if you prefer
+      +database: youtube_queries
+      +materialized: view
       +tags: [ 'analytics' ]
 
 seeds:
   project2:
-    +database: youtube_analytics
+    +database: youtube_gold
 
 snapshots:
   project2:
-    +target_schema: youtube_analytics
+    +target_schema: youtube_gold

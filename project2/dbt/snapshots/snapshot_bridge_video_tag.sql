@@ -2,7 +2,7 @@
 
 {{
     config(
-      target_schema='youtube_analytics',
+      target_schema='youtube_gold',
       unique_key="video_sk || '-' || tag_id",
       strategy='timestamp',
       updated_at='loaded_at',
