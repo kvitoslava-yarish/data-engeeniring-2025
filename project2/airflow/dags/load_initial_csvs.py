@@ -1,4 +1,5 @@
 """load the provided seed CSV files into ClickHouse"""
+"""YOU NEED TO PUT THE .CSV FILES IN THE AIRFLOW/ FOLDER FROM DATA.ZIP"""
 
 from datetime import datetime
 import logging
