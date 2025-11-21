@@ -93,4 +93,4 @@ cleaned AS (
 
 SELECT *
 FROM cleaned
-WHERE rn = 1;
+WHERE rn = 1
