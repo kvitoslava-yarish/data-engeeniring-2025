@@ -1,6 +1,5 @@
 version: "3.9"
 
-# 1. Airflow Environment Variables
 x-airflow-env: &airflow_env
   AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES}
   AIRFLOW__WEBSERVER__RBAC: ${AIRFLOW__WEBSERVER__RBAC}
@@ -10,45 +9,6 @@ x-airflow-env: &airflow_env
   AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
   AIRFLOW__CORE__ENABLE_XCOM_PICKLING: "true"
   TZ: ${TZ}
-
-# 2. Airflow Common Settings (FIX: Sets correct path for DB)
-x-airflow-common: &airflow_common
-  build:
-    context: ./airflow
-  restart: always
-  environment:
-    <<: *airflow_env
-    CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
-    CLICKHOUSE_DB: ${CLICKHOUSE_DB}
-    CLICKHOUSE_USER: ${CLICKHOUSE_USER}
-    CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
-    CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "sqlite:////opt/airflow/db/airflow.db"
-  volumes:
-    - airflow_dags:/opt/airflow/dags
-    - airflow_logs:/opt/airflow/logs
-    - airflow_plugins:/opt/airflow/plugins
-    - airflow_db:/opt/airflow/db
-    - ./airflow/include:/opt/airflow/include
-    - ./dbt:/opt/dbt
-
-# 3. DBT Common Settings
-x-dbt-common: &dbt_common
-  build:
-    context: ./dbt
-  working_dir: /usr/app
-  volumes:
-    - ./dbt:/usr/app
-  environment:
-    TZ: ${TZ}
-    DBT_TARGET: ${DBT_TARGET}
-    DBT_SCHEMA: ${DBT_SCHEMA}
-    DBT_HOST: ${DBT_HOST}
-    DBT_PORT: ${DBT_PORT}
-    DBT_USER: ${DBT_USER}
-    DBT_PASSWORD: ${DBT_PASSWORD}
-    DBT_DATABASE: ${DBT_DATABASE}
-    DBT_PROFILES_DIR: /usr/app/profiles
 
 services:
   clickhouse:
@@ -72,22 +32,53 @@ services:
       retries: 10
 
   airflow-init:
-    <<: *airflow_common
+    build:
+      context: ./airflow
     container_name: airflow-init
-    restart: "no"
-    user: "0:0"
     entrypoint: /bin/bash
-    command: -c "chown -R ${AIRFLOW_UID}:${AIRFLOW_GID} /opt/airflow/logs /opt/airflow/db && \
-      chmod -R 777 /opt/airflow/logs /opt/airflow/db && \
+    command: -c "chown -R ${AIRFLOW_UID}:${AIRFLOW_GID} /opt/airflow/logs && \
+      chmod -R 777 /opt/airflow/logs && \
       airflow db migrate && \
       airflow users create --role Admin --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PWD} --firstname Admin --lastname User --email ${AIRFLOW_ADMIN_EMAIL}"
+    environment:
+      <<: *airflow_env
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
+    user: "0:0"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
+      - ./airflow/include:/opt/airflow/include
+      - ./dbt:/opt/dbt
     depends_on:
       clickhouse:
         condition: service_healthy
 
   airflow-webserver:
-    <<: *airflow_common
+    build:
+      context: ./airflow
     container_name: airflow-webserver
+    restart: always
+    environment:
+      <<: *airflow_env
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
+    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
+      - ./airflow/include:/opt/airflow/include
+      - ./dbt:/opt/dbt
     command: >
       bash -c "mkdir -p /opt/dbt/target &&
                chmod -R 777 /opt/dbt/target &&
@@ -99,8 +90,25 @@ services:
         condition: service_started
 
   airflow-scheduler:
-    <<: *airflow_common
+    build:
+      context: ./airflow
     container_name: airflow-scheduler
+    restart: always
+    environment:
+      <<: *airflow_env
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
+    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
+      - ./airflow/include:/opt/airflow/include
+      - ./dbt:/opt/dbt
     command: >
       bash -c "mkdir -p /opt/dbt/target &&
                chmod -R 777 /opt/dbt/target &&
@@ -116,19 +124,47 @@ services:
       clickhouse:
         condition: service_healthy
 
+
   dbt-init:
-    <<: *dbt_common
+    build:
+      context: ./dbt
     container_name: dbt-init
-    restart: "no"
+    working_dir: /usr/app
     entrypoint: /bin/bash
     command: -c "dbt deps && dbt build"
+    environment:
+      TZ: ${TZ}
+      DBT_TARGET: ${DBT_TARGET}
+      DBT_SCHEMA: ${DBT_SCHEMA}
+      DBT_HOST: ${DBT_HOST}
+      DBT_PORT: ${DBT_PORT}
+      DBT_USER: ${DBT_USER}
+      DBT_PASSWORD: ${DBT_PASSWORD}
+      DBT_DATABASE: ${DBT_DATABASE}
+      DBT_PROFILES_DIR: /usr/app/profiles
+    volumes:
+      - ./dbt:/usr/app
     depends_on:
       clickhouse:
         condition: service_healthy
 
   dbt:
-    <<: *dbt_common
+    build:
+      context: ./dbt
     container_name: dbt
+    working_dir: /usr/app
+    environment:
+      TZ: ${TZ}
+      DBT_TARGET: ${DBT_TARGET}
+      DBT_SCHEMA: ${DBT_SCHEMA}
+      DBT_HOST: ${DBT_HOST}
+      DBT_PORT: ${DBT_PORT}
+      DBT_USER: ${DBT_USER}
+      DBT_PASSWORD: ${DBT_PASSWORD}
+      DBT_DATABASE: ${DBT_DATABASE}
+      DBT_PROFILES_DIR: /usr/app/profiles
+    volumes:
+      - ./dbt:/usr/app
     ports:
       - "8081:8081"
     command: tail -f /dev/null
@@ -145,11 +181,9 @@ services:
       clickhouse:
         condition: service_healthy
 
----
 
 volumes:
   clickhouse_data:
   airflow_dags:
   airflow_logs:
   airflow_plugins:
-  airflow_db:
