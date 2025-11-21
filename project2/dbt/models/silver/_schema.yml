@@ -23,15 +23,15 @@ models:
           - not_null:
               config:
                 severity: warn
-          - dbt_utils.expression_is_true:
-              expression: "total_views >= 0"
+          - dbt_utils.accepted_range:
+              min_value: 0
               config:
                 severity: warn
       - name: subscribers
         description: "Subscriber count of the channel."
         tests:
-          - dbt_utils.expression_is_true:
-              expression: "subscribers >= 0"
+          - dbt_utils.accepted_range:
+              min_value: 0
               config:
                 severity: warn
 
@@ -54,21 +54,21 @@ models:
       - name: view_count
         description: "Total views recorded at this snapshot."
         tests:
-          - dbt_utils.expression_is_true:
-              expression: "view_count >= 0"
+          - dbt_utils.accepted_range:
+              min_value: 0
               config:
                 severity: warn
       - name: like_count
         description: "Likes recorded at this snapshot."
         tests:
-          - dbt_utils.expression_is_true:
-              expression: "like_count >= 0"
+          - dbt_utils.accepted_range:
+              min_value: 0
               config:
                 severity: warn
       - name: comment_count
         description: "Comments recorded at this snapshot."
         tests:
-          - dbt_utils.expression_is_true:
-              expression: "comment_count >= 0"
+          - dbt_utils.accepted_range:
+              min_value: 0
               config:
                 severity: warn
