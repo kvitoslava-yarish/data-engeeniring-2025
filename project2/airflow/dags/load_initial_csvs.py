@@ -11,17 +11,22 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from clickhouse_driver import Client
+import os
+import platform
 
 logger = logging.getLogger(__name__)
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "data"))
 
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST")
 CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "raw_youtube")
 CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
 CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
 CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT", "9000"))
-INITIAL_CSV_DIR = os.getenv("INITIAL_CSV_DIR", "/opt/airflow/")
-CHANNELS_CSV = os.path.join(INITIAL_CSV_DIR, "estonian_youtubers.csv")
-VIDEOS_CSV = os.path.join(INITIAL_CSV_DIR, "videos_metadata.csv")
+CHANNELS_CSV = os.path.join(DATA_DIR, "estonian_youtubers.csv")
+VIDEOS_CSV = os.path.join(DATA_DIR, "videos_metadata.csv")
 BATCH_SIZE = 1000
 
 
@@ -103,7 +108,7 @@ def _ensure_tables(client: Client) -> None:
 def _require_file(path: str) -> None:
     if not os.path.exists(path):
         raise FileNotFoundError(
-            f"CSV not found at {path}. Ensure data.zip is extracted into {INITIAL_CSV_DIR}."
+            f"CSV not found at {path}. Ensure data.zip is extracted into {DATA_DIR}."
         )
 
 
