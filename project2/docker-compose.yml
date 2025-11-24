@@ -63,6 +63,7 @@ services:
     build:
       context: ./airflow
     container_name: airflow-webserver
+    user: "1000:0"
     restart: always
     environment:
       <<: *airflow_env
@@ -71,6 +72,7 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
+      DBT_TARGET_PATH: /tmp/dbt_target
     #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -79,12 +81,13 @@ services:
       - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
+      - ./airflow/data:/opt/airflow/data
     command: >
       bash -c "mkdir -p /opt/dbt/target &&
                chmod -R 777 /opt/dbt/target &&
                exec airflow webserver"
     ports:
-      - "8080:8080"
+      - "8083:8080"
     depends_on:
       airflow-scheduler:
         condition: service_started
@@ -93,6 +96,7 @@ services:
     build:
       context: ./airflow
     container_name: airflow-scheduler
+    user: "1000:0"
     restart: always
     environment:
       <<: *airflow_env
@@ -109,6 +113,7 @@ services:
       - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
+      - ./airflow/data:/opt/airflow/data
     command: >
       bash -c "mkdir -p /opt/dbt/target &&
                chmod -R 777 /opt/dbt/target &&
@@ -129,6 +134,7 @@ services:
     build:
       context: ./dbt
     container_name: dbt-init
+    user: "1000:1000"
     working_dir: /usr/app
     entrypoint: /bin/bash
     command: -c "dbt deps && dbt build"
@@ -152,6 +158,7 @@ services:
     build:
       context: ./dbt
     container_name: dbt
+    user: "1000:1000"
     working_dir: /usr/app
     environment:
       TZ: ${TZ}
@@ -163,6 +170,8 @@ services:
       DBT_PASSWORD: ${DBT_PASSWORD}
       DBT_DATABASE: ${DBT_DATABASE}
       DBT_PROFILES_DIR: /usr/app/profiles
+      DBT_TARGET_PATH: /tmp/dbt_target
+
     volumes:
       - ./dbt:/usr/app
     ports:
