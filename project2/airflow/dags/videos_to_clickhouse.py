@@ -142,6 +142,8 @@ def insert_batch_to_clickhouse(client, videos_data, batch_number):
         """, rows)
         logger.info(f"Batch {batch_number}: Inserted {len(rows)} videos into ClickHouse")
 
+        
+
 
 def insert_videos_to_clickhouse(**context):
     logger.info("Starting video ingestion process")
@@ -220,6 +222,10 @@ def insert_videos_to_clickhouse(**context):
         insert_batch_to_clickhouse(client, all_videos, batch_num)
 
     logger.info("Video ingestion completed successfully")
+
+    client.execute("""OPTIMIZE TABLE raw_youtube.videos""")
+
+    logger.info(f"Optimized rows in youtube.raw_youtube.videos")
 
 
 with DAG(
