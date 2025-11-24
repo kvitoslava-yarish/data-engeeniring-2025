@@ -16,7 +16,7 @@ CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB")
 CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER")
 CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT"))
-API_KEY = "AIzaSyA_HQDPjO6HLPuYVbeZXH5hR8KGb_WWKq8"
+API_KEY = ""
 
 logging.basicConfig(
     level=logging.INFO,
@@ -215,3 +215,4 @@ with DAG(
         python_callable=insert_channels_to_clickhouse,
         provide_context=True,
     )
+
