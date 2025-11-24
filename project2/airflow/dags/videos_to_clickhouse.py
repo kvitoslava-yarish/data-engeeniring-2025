@@ -25,7 +25,7 @@ CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT"))
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 
-API_KEY = "AIzaSyA3DBoFW0B6sFeF4JMtRkTWZ2Wd_LsrLXo"
+API_KEY = ""
 
 def get_video_ids_from_playlist(playlist_id, api_key):
     logger.info(f"Fetching video IDs from playlist {playlist_id}")
@@ -242,3 +242,4 @@ with DAG(
         python_callable=insert_videos_to_clickhouse,
         provide_context=True,
     )
+
