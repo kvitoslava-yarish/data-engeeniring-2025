@@ -1,0 +1,258 @@
+version: 2
+
+models:
+  - name: fact_channel_metrics
+    description: "Daily aggregated metrics for each channel. This is an incremental fact table."
+    columns:
+      - name: id
+        description: "Unique surrogate key for the record, generated from channel_id and date_key."
+        tests:
+          - unique
+          - not_null
+      - name: channel_sk
+        description: "Foreign key to the channel dimension (dim_channel)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_channel')
+              field: channel_sk
+      - name: date_key
+        description: "Foreign key to the date dimension (dim_date)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: subscribers
+        description: "Total number of subscribers for the channel on that day."
+      - name: views
+        description: "Total number of views for the channel on that day."
+      - name: videos
+        description: "Total number of videos for the channel on that day."
+
+  - name: fact_video_performance
+    description: "Daily performance metrics for each video. This is an incremental fact table."
+    columns:
+      - name: id
+        description: "Unique surrogate key for the record, generated from video_id and date_key."
+        tests:
+          - unique
+          - not_null
+      - name: video_sk
+        description: "Foreign key to the video dimension (dim_video)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_video')
+              field: video_sk
+      - name: channel_sk
+        description: "Foreign key to the channel dimension (dim_channel)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_channel')
+              field: channel_sk
+      - name: date_key
+        description: "Foreign key to the date dimension (dim_date)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: view_count
+        description: "Number of views the video received on that day."
+      - name: like_count
+        description: "Number of likes the video received on that day."
+      - name: comment_count
+        description: "Number of comments the video received on that day."
+
+  - name: dim_channel
+    description: "Slowly changing dimension (Type 2) for YouTube channels. This view shows the current and historical versions of channel metadata."
+    columns:
+      - name: channel_sk
+        description: "Surrogate key for the channel. This is the primary key for the dimension."
+        tests:
+          - unique
+          - not_null
+      - name: natural_channel_id
+        description: "The natural business key (YouTube's channel ID)."
+        tests:
+          - not_null
+      - name: title
+        description: "Channel title."
+      - name: description
+        description: "Channel description."
+      - name: custom_url
+        description: "Channel's custom URL."
+      - name: hidden_subscribers
+        description: "Flag indicating if the channel's subscriber count is hidden."
+      - name: published_at
+        description: "Timestamp when the channel was published."
+      - name: country
+        description: "Channel's associated country."
+      - name: default_language
+        description: "Channel's default language."
+      - name: uploads_playlist_id
+        description: "ID of the playlist containing the channel's uploads."
+      - name: topics
+        description: "Channel's associated topic categories."
+      - name: valid_from
+        description: "Timestamp when this version of the record became valid (from dbt snapshot)."
+        tests:
+          - not_null
+      - name: valid_to
+        description: "Timestamp when this version of the record became invalid (from dbt snapshot)."
+      - name: is_current
+        description: "Boolean flag indicating if this is the current, active version of the record."
+        tests:
+          - not_null
+
+  - name: dim_video
+    description: "Slowly changing dimension (Type 2) for YouTube videos. This view shows the current and historical versions of video metadata."
+    columns:
+      - name: video_sk
+        description: "Surrogate key for the video. This is the primary key for the dimension."
+        tests:
+          - unique
+          - not_null
+      - name: video_id
+        description: "The natural business key (YouTube's video ID)."
+        tests:
+          - not_null
+      - name: title
+        description: "Video title."
+      - name: published_at
+        description: "Timestamp when the video was published."
+      - name: category_name
+        description: "Friendly name of the video's category (joined from video_categories)."
+      - name: duration
+        description: "Video duration in ISO 8601 format."
+      - name: definition
+        description: "Video definition (e.g., 'hd', 'sd')."
+      - name: caption
+        description: "Flag indicating if the video has captions."
+      - name: licensed_content
+        description: "Flag indicating if the video has licensed content."
+      - name: privacy_status
+        description: "Video privacy status (e.g., 'public', 'private')."
+      - name: license
+        description: "Video license type."
+      - name: region_restriction
+        description: "Regions where the video is restricted."
+      - name: topic_categories
+        description: "Video's associated topic categories."
+      - name: valid_from
+        description: "Timestamp when this version of the record became valid (from dbt snapshot)."
+        tests:
+          - not_null
+      - name: valid_to
+        description: "Timestamp when this version of the record became invalid (from dbt snapshot)."
+      - name: is_current
+        description: "Boolean flag indicating if this is the current, active version of the record."
+        tests:
+          - not_null
+
+  - name: dim_date
+    description: "Dimension table with date attributes, generated from dbt_utils.date_spine."
+    columns:
+      - name: date_key
+        description: "Unique key for the date in YYYY-MM-DD format. This is the primary key."
+        tests:
+          - unique
+          - not_null
+      - name: date
+        description: "Full date timestamp."
+      - name: year
+        description: "Year component of the date."
+      - name: quarter
+        description: "Quarter component of the date (1-4)."
+      - name: month
+        description: "Month component of the date (1-12)."
+      - name: day
+        description: "Day of the month (1-31)."
+      - name: week_day
+        description: "Day of the week (1-7)."
+      - name: is_weekend
+        description: "Boolean flag indicating if the day is a weekend (Saturday or Sunday)."
+
+  - name: dim_keyword
+    description: "Dimension table for unique channel keywords. Keywords are extracted from the staging layer."
+    columns:
+      - name: keyword_id
+        description: "Surrogate key for the keyword. This is the primary key."
+        tests:
+          - unique
+          - not_null
+      - name: keyword
+        description: "The keyword string."
+        tests:
+          - not_null
+
+  - name: dim_tag
+    description: "Dimension table for unique video tags. Tags are extracted from the staging layer."
+    columns:
+      - name: tag_id
+        description: "Surrogate key for the tag. This is the primary key."
+        tests:
+          - unique
+          - not_null
+      - name: tag_name
+        description: "The tag string."
+        tests:
+          - not_null
+
+  - name: bridge_channel_keyword
+    description: "Bridge table linking channels to their associated keywords, resolving a many-to-many relationship. Based on a snapshot for versioning."
+    columns:
+      - name: channel_sk
+        description: "Foreign key to the channel dimension (dim_channel)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_channel')
+              field: channel_sk
+      - name: keyword_id
+        description: "Foreign key to the keyword dimension (dim_keyword)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_keyword')
+              field: keyword_id
+      - name: valid_from
+        description: "Timestamp when this association became valid."
+        tests:
+          - not_null
+      - name: valid_to
+        description: "Timestamp when this association became invalid."
+      - name: is_current
+        description: "Boolean flag indicating if this is the current, active association."
+        tests:
+          - not_null
+
+  - name: bridge_video_tag
+    description: "Bridge table linking videos to their associated tags, resolving a many-to-many relationship. Based on a snapshot for versioning."
+    columns:
+      - name: video_sk
+        description: "Foreign key to the video dimension (dim_video)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_video')
+              field: video_sk
+      - name: tag_id
+        description: "Foreign key to the tag dimension (dim_tag)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_tag')
+              field: tag_id
+      - name: valid_from
+        description: "Timestamp when this association became valid."
+        tests:
+          - not_null
+      - name: valid_to
+        description: "Timestamp when this association became invalid."
+      - name: is_current
+        description: "Boolean flag indicating if this is the current, active association."
+        tests:
+          - not_null
