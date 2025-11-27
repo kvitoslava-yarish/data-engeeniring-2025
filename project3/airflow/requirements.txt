@@ -1,0 +1,8 @@
+clickhouse-driver==0.2.9
+dbt-clickhouse==1.8.3
+pandas==2.2.2
+pyyaml==6.0.2
+requests==2.32.3
+pyiceberg[s3fs,pyarrow]
+minio==7.2.9
+duckdb==1.1.3
