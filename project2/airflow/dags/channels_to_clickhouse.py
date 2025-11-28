@@ -7,6 +7,8 @@ import pandas as pd
 import requests
 import time
 import os
+import logging
+
 
 
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST")
@@ -14,7 +16,13 @@ CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB")
 CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER")
 CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT"))
-API_KEY = "AIzaSyA3DBoFW0B6sFeF4JMtRkTWZ2Wd_LsrLXo"
+API_KEY = ""
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 def search_channels(query, max_results=50):
@@ -43,6 +51,7 @@ def search_channels(query, max_results=50):
 
 def get_channel_stats(channel_ids):
     stats = []
+    logger.info(f"Getting channel stats info")
     for i in range(0, len(channel_ids), 50):
         batch = channel_ids[i:i + 50]
         url = "https://www.googleapis.com/youtube/v3/channels"
@@ -77,6 +86,9 @@ def get_channel_stats(channel_ids):
                 "topics": ", ".join(item.get("topicDetails", {}).get("topicCategories", []))
             })
         time.sleep(0.1)
+
+    logger.info(f"Getting found {len(stats)} stats")
+
     return stats
 
 
@@ -87,6 +99,8 @@ def get_channels():
     ]
 
     all_channels = []
+    logger.info(f"Fetching channels")
+
     for kw in keywords:
         found = search_channels(kw)
         all_channels.extend(found)
@@ -146,7 +160,7 @@ def insert_channels_to_clickhouse(**context):
         TTL loaded_at + INTERVAL 90 DAY
         SETTINGS index_granularity = 8192
     """)
-
+    logger.info(f"Created table if not exist")
     df = get_channels().fillna("")
     df["ts"] = datetime.now()
 
@@ -179,8 +193,12 @@ def insert_channels_to_clickhouse(**context):
             keywords, uploadsPlaylistId, topics
         ) VALUES
     """, rows)
+    logger.info(f"Inserted {len(rows)} rows into youtube.raw_youtube.channels")
 
-    print(f"Inserted {len(rows)} rows into youtube.raw_youtube.channels")
+    client.execute("""OPTIMIZE TABLE raw_youtube.channels""")
+
+    logger.info(f"Optimized rows in youtube.raw_youtube.channels")
+
 
 
 with DAG(
@@ -197,3 +215,4 @@ with DAG(
         python_callable=insert_channels_to_clickhouse,
         provide_context=True,
     )
+
