@@ -61,6 +61,9 @@ models:
               field: date_key
       - name: view_count
         description: "Number of views the video received on that day."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
       - name: like_count
         description: "Number of likes the video received on that day."
       - name: comment_count

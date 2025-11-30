@@ -1,1 +1,0 @@
-sudo chown -R 1000:0 docker-volume/openmetadata-es
