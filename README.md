@@ -224,5 +224,5 @@ The YouTube Analytics dashboard displays key metrics derived from the youtube_db
 
 Screenshot:
 
-![Superset Dashboard](images/superset_dashboard.jpg)
+![Superset Dashboard](project3/images/superset_dashboard.jpg)
 
