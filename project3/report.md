@@ -195,6 +195,8 @@ Screenshot placeholder:
 
 # 10. Superset Dashboard
 
+Make sure dbt snapshot is done and after the snapshot rerun golden layer dag.
+
 URL:
 [http://localhost:8088](http://localhost:8088)
 
@@ -207,17 +209,20 @@ admin / admin
 Steps:
 
 1. Connect to ClickHouse (preconfigured)
-2. Create datasets:
+2. Create datasets from youtube_dbt.
 
-   * `top_10_channels_full`
-   * `top_10_videos_full`
+   *`07_top_cat_by_view`
+   *`02_top_10_videos_by_topic_category`
+   *`01_top_10_channels`
+
 3. Build dashboard with:
 
    * at least **2 charts**
    * at least **1 filter**
-4. Answer business questions from Project 1
 
-Screenshot placeholder:
+The YouTube Analytics dashboard displays key metrics derived from the youtube_dbt ClickHouse database.
+
+Screenshot:
 
 ![Superset Dashboard](images/superset_dashboard.jpg)
 
