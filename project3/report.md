@@ -150,30 +150,21 @@ The project implements secure data access using ClickHouse roles and masked view
 ### 1. Creating Roles and Users
 
 ```
-docker exec -i clickhouse clickhouse-client \
-  --user default --password password \
-  < clickhouse/setup_access.sql
+docker exec -i clickhouse clickhouse-client --user default --password password  < clickhouse/setup_access.sql
 ```
 ### 2. Logging into ClickHouse With Each Role
 
-Use the following commands:
-```bash
-docker exec -i clickhouse clickhouse-client \
-  --user default --password password \
-  < clickhouse/setup_access.sql
-```
+
 #### Full-access user
 
 ```bash
-docker exec -it clickhouse clickhouse-client \
-  --user analyst_full_user --password full123
+docker exec -it clickhouse clickhouse-client --user analyst_full_user --password full123
 ```
 
 #### Limited-access user
 
 ```bash
-docker exec -it clickhouse clickhouse-client \
-  --user analyst_limited_user --password lim123
+docker exec -it clickhouse clickhouse-client --user analyst_limited_user --password lim123
 ```
 ---
 
