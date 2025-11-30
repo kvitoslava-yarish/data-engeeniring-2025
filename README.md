@@ -11,7 +11,7 @@ Full ELT Pipeline • ClickHouse • Airflow • dbt • Iceberg • Superset �
 ## 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/kvitoslava-yarish/data-engeeniring-2025/
 cd project3
 ```
 
