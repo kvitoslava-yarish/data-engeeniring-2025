@@ -104,7 +104,7 @@ You can also run the dbt transformations through Airflow by triggering these DAG
 
 This way, your entire ELT process is orchestrated inside Airflow.
 
-# 5. ClickHouse Roles, Users, Permissions & Masking
+# 3. ClickHouse Roles, Users, Permissions & Masking
 
 The project implements secure data access using ClickHouse roles and masked views for sensitive data fields.
 
@@ -136,7 +136,6 @@ The project implements secure data access using ClickHouse roles and masked view
 > Note: The dataset does **not** contain real PII or confidential fields. These columns were masked **only to satisfy project requirements** that at least three fields must be pseudonymized.
 
 ## How to set roles and how to use
-## ClickHouse Roles: Creation, Usage, and Testing
 
 ### 1. Creating Roles and Users
 
