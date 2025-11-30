@@ -272,18 +272,8 @@ These are the key visual assets required to document the project:
 ### Openmetadata tests
 ![dbt Workflow](images/metadata_results.png)
 
-URL:
-[http://localhost:8585](http://localhost:8585)
+Screenshots:
 
-Login:
-
-```
-admin / admin
-```
-
-Screenshot placeholder:
-
-```
 ![OpenMetadata Tests](images/metadata_results.png)
 
 
@@ -291,7 +281,7 @@ Screenshot placeholder:
 
 
 ![OpenMetadata](images/metadata_table.png)
-```
+
 
 ---
 
