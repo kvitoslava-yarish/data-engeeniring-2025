@@ -174,7 +174,7 @@ docker exec -it clickhouse clickhouse-client --user analyst_limited_user --passw
 SELECT * FROM youtube_dbt.top_10_channels_full LIMIT 5;
 ```
 
-# 8. OpenMetadata
+# 4. OpenMetadata
 
 URL:
 [http://localhost:8585](http://localhost:8585)
@@ -193,7 +193,7 @@ Screenshot placeholder:
 
 ---
 
-# 10. Superset Dashboard
+# 5. Superset Dashboard
 
 Make sure dbt snapshot is done and after the snapshot rerun golden layer dag.
 
