@@ -80,7 +80,7 @@ To load youtube channels into clickhouse as iceberg table, trigger the Airflow D
 
 * `iceberg_bronze_layer `
 
-This DAG inserts the raw youtube_channels CSV data into the `bronze` database.
+This DAG inserts the raw youtube_channels CSV data into the `bronze` database as table youtube_channels.
 NOTE: this is a standalone table. Downstream processes do not rely on it.
 
 ---
