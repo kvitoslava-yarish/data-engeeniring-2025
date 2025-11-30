@@ -183,20 +183,7 @@ docker exec -it clickhouse clickhouse-client \
 SELECT * FROM youtube_dbt.top_10_channels_full LIMIT 5;
 ```
 
-# 8. Iceberg Setup
-
-(Leave blank if not used)
-
-Typical steps:
-
-* Iceberg catalog configured in `docker-compose.yml`
-* Warehouse stored in mounted volume
-* Tables created by dbt / SQL migrations
-* Validate with ClickHouse queries
-
----
-
-# 9. OpenMetadata
+# 8. OpenMetadata
 
 URL:
 [http://localhost:8585](http://localhost:8585)
