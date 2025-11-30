@@ -221,13 +221,13 @@ database name is youtube_dbt
 username and password are “default”
 
 
-3. Create datasets from youtube_dbt.
+2. Create datasets from youtube_dbt.
 
    *`07_top_cat_by_view`
    *`02_top_10_videos_by_topic_category`
    *`01_top_10_channels`
 
-4. Build dashboard with:
+3. Build dashboard with:
 
    * at least **2 charts**
    * at least **1 filter**
