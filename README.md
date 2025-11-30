@@ -209,19 +209,25 @@ admin / admin
 Steps:
 
 1. Connect to ClickHouse
+
 Add New Database
+
 Choose Clickhouse Connect
+
 Host is clickhouse, port is 8123
+
 database name is youtube_dbt
+
 username and password are “default”
 
-2. Create datasets from youtube_dbt.
+
+3. Create datasets from youtube_dbt.
 
    *`07_top_cat_by_view`
    *`02_top_10_videos_by_topic_category`
    *`01_top_10_channels`
 
-3. Build dashboard with:
+4. Build dashboard with:
 
    * at least **2 charts**
    * at least **1 filter**
