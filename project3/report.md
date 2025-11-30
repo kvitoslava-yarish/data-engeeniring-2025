@@ -74,6 +74,16 @@ To load raw CSV files into ClickHouse, trigger the Airflow DAG:
 This DAG inserts the raw YouTube CSV data into the `raw_youtube` schema.
 
 ---
+## Load Initial csv youtube_channels as iceberg table
+
+To load youtube channels into clickhouse as iceberg table, trigger the Airflow DAG:
+
+* `iceberg_bronze_layer `
+
+This DAG inserts the raw youtube_channels CSV data into the `bronze` database.
+NOTE: this is a standalone table. Downstream processes do not rely on it.
+
+---
 
 ## DBT Part
 
