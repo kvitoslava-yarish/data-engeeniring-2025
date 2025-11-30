@@ -53,16 +53,14 @@ ORDER BY (channelId, loaded_at)
 TTL loaded_at + INTERVAL 90 DAY
 SETTINGS index_granularity = 8192;
 
-CREATE DATABASE youtube_analytics;
-
-
 CREATE ROLE IF NOT EXISTS analyst_full;
 CREATE ROLE IF NOT EXISTS analyst_limited;
 
-CREATE USER IF NOT EXISTS analyst_full_user IDENTIFIED WITH no_password;
-CREATE USER IF NOT EXISTS analyst_limited_user IDENTIFIED WITH no_password;
+CREATE USER IF NOT EXISTS analyst_full_user
+    IDENTIFIED WITH plaintext_password BY 'full123';
+
+CREATE USER IF NOT EXISTS analyst_limited_user
+    IDENTIFIED WITH plaintext_password BY 'lim123';
 
 GRANT analyst_full TO analyst_full_user;
 GRANT analyst_limited TO analyst_limited_user;
-
-CREATE DATABASE IF NOT EXISTS youtube_analytics;

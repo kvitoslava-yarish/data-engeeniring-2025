@@ -7,7 +7,7 @@ project2:
       port: "{{ env_var('DBT_PORT', '8123') | int }}"
       user: "{{ env_var('DBT_USER', 'default') }}"
       password: "{{ env_var('DBT_PASSWORD', 'password') }}"
-      database: youtube_staging
-      schema: youtube_staging
+      database: youtube_dbt
+      schema: youtube_dbt
       threads: 4
       secure: False

@@ -16,20 +16,21 @@ models:
     +materialized: table
 
     silver:
-      +database: youtube_silver
-      +materialized: table
       +tags: ['silver']
-
+      +database: youtube_dbt
     gold:
-      +database: youtube_gold
-      +materialized: view
       +tags: ['gold']
+      +database: youtube_dbt
 
     analytics:
-      +database: youtube_queries
+      +tags: ['analytics']
       +materialized: view
-      +tags: [ 'analytics' ]
+      +database: youtube_dbt
 
+    analytics_secure:
+      +tags: ['secure']
+      +materialized: view
+      +database: youtube_dbt
 seeds:
   project2:
     +database: youtube_gold
