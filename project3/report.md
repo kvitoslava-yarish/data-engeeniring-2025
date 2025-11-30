@@ -219,9 +219,7 @@ Steps:
 
 Screenshot placeholder:
 
-```
 ![Superset Dashboard](images/superset_dashboard.jpg)
-```
 
 ---
 
