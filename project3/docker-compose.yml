@@ -281,6 +281,7 @@ services:
       iceberg_network:
 
   superset:
+    image: apache/superset:latest
     build:
       context: .
     container_name: superset

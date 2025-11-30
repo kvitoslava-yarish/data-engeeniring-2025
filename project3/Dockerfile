@@ -11,10 +11,17 @@ WORKDIR /lab
 COPY data/ ./data/
 
 
+
 FROM apache/superset:3.1.1
 
 USER root
+
+RUN pip uninstall -y sqlalchemy alembic
+
 RUN pip install --no-cache-dir \
-    clickhouse-connect==0.7.18 \
-    clickhouse-sqlalchemy==0.3.2
+    psycopg2-binary \
+    clickhouse-connect \
+    "sqlalchemy<2.0" \
+    "alembic==1.13.1"
+
 USER superset
