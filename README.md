@@ -208,7 +208,13 @@ admin / admin
 
 Steps:
 
-1. Connect to ClickHouse (preconfigured)
+1. Connect to ClickHouse
+Add New Database
+Choose Clickhouse Connect
+Host is clickhouse, port is 8123
+database name is youtube_dbt
+username and password are “default”
+
 2. Create datasets from youtube_dbt.
 
    *`07_top_cat_by_view`
