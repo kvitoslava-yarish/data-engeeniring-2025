@@ -220,7 +220,7 @@ Steps:
 Screenshot placeholder:
 
 ```
-![Superset Dashboard](images/superset_dashboard.png)
+![Superset Dashboard](images/superset_dashboard.jpg)
 ```
 
 ---
