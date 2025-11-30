@@ -1,85 +1,228 @@
-# data-engineering-2025
+# YouTube Analytics Data Platform
 
-## Objective
-Fetch Estonian Youtube data to understand current trends for videomaking and channel popularity for advertising.
+This project delivers a modular, end‑to‑end analytics platform built on a modern data engineering stack. The architecture is composed of several coordinated services: Airflow orchestrates ELT workflows, ClickHouse serves as the high‑performance analytical database, dbt manages SQL transformations and enforces data quality, Iceberg (optional) provides table‑format capabilities, Superset exposes BI dashboards, and OpenMetadata ensures lineage, documentation, and governance. Together, these components form a production‑ready pipeline that ingests raw YouTube data, transforms it into dimensional models, applies secure role‑based access control with masking, and enables interactive analytics.
 
-## Explanation
-
-Our data dictionary is "data dictionary.pdf".
-
-Our data sources are initial csv files for seeds (found inside data.zip) and YouTube API.
-
-The scripts for sourcing our data is in /scripts.
-
-Our Data Architecture diagram is inside /workflow_schema
-
-Our star schema is "Star Schema.jpeg".
-
-![Star Schema](images/StarSchema.jpeg)
-
-Our demo SQL queries are in /sql.
-
-## Architecture Overview
-
-| Component | Role | Access/Port |
-| :--- | :--- | :--- |
-| **Airflow** | Orchestration & ETL (Data Ingestion) | `http://localhost:8080` |
-| **ClickHouse** | OLAP Data Warehouse | HTTP: `http://localhost:8123` |
-| **dbt** | Transformation (T in ELT) & Data Modeling (Silver/Gold layers) | Run-time container |
-| **Tabix** | Web client for querying ClickHouse | `http://localhost:8124` |
+Full ELT Pipeline • ClickHouse • Airflow • dbt • Iceberg • Superset • OpenMetadata
 
 ---
 
-## Project Launch Instructions
+# 1. How to Run the Project
 
-These instructions assume you have **Docker** and **Docker Compose** installed.
-
-### 1. Prerequisites and Setup
-
-1.  **Obtain a YouTube API Key:** The Airflow DAG (`channels_to_clickhouse.py` and `videos_to_clickhouse.py`) fetches data from the YouTube Data API. You must obtain an API key from Google Cloud Console.
-2.  **Update the API Key:** Replace the placeholder key in `project2/airflow/dags/channels_to_clickhouse.py` and `project2/airflow/dags/videos_to_clickhouse.py` with your actual key.
-    ```python
-    API_KEY = "AIzaSyA3DBoFW0B6sFeF4JMtRkTWZ2Wd_LsrLXo" # 👈 REPLACE THIS VALUE
-    ```
-3.  **Prepare Directories:** Ensure all necessary local directories exist for volume mounting:
-    ```bash
-    mkdir -p project2/airflow/{dags,logs,plugins,include}
-    mkdir -p project2/clickhouse/init
-    ```
-4.  **Check Configuration:** Review `project2/.env` to ensure the necessary environment variables for Airflow, ClickHouse, and dbt connections are correctly configured. The Airflow admin user is set to `admin` with password `admin`.
-
-### 2. Launch Services
-
-Start all containers in detached mode. This process includes service startup and critical initialization steps handled by dedicated containers (`airflow-init`, `dbt-init`).
+## 1. Clone the repository
 
 ```bash
-docker compose up -d
+git clone <your-repo-url>
+cd project3
 ```
 
-### 3. Verification and Access
+## 2. Start all services
 
-After launching, wait a few minutes for the initial database setup (`airflow-init`) and dbt project build (`dbt-init`) to complete successfully. The `airflow-scheduler` will only start after `airflow-init` completes successfully.
+```bash
+docker compose up -d --build
+```
 
-| Service | Access URL | Credentials |
-| :--- | :--- | :--- |
-| **Airflow Webserver** | `http://localhost:8080` | **User:** `admin`, **Password:** `admin` |
-| **ClickHouse Web Client (Tabix)** | `http://localhost:8124` | (Connect to host: `clickhouse`, port: `8123`) |
+## 3. Check system health
 
-## Visual Documentation Checklist
+```bash
+docker compose logs -f
+```
+---
 
-These are the key visual assets required to document the project:
+### 4. Fixing Airflow File Permission Errors
 
-### Data Pipeline (DAGs)
-![DAGs Diagram](images/DAGs.jpeg)
+If Airflow fails to start with logs like:
 
-### dbt Workflow
-![dbt Workflow](images/dbt.jpeg)
+```
+PermissionError: [Errno 13] Permission denied: './airflow/logs'
+```
 
-[//]: # (### Results of analytical queries)
+Run:
 
-[//]: # ()
-[//]: # (![Query1]&#40;images/1.jpeg&#41;)
+```bash
+sudo chown -R $USER:$USER ./airflow/logs
+sudo chmod -R 777 ./airflow/logs
+```
 
-[//]: # ()
-[//]: # (![Query2]&#40;images/2.jpeg&#41;)
+This ensures Airflow can write logs inside the mounted volume.
+
+---
+# 2. Setup Database
+
+## Access Airflow
+
+To open the Airflow UI, go to:
+
+```
+http://localhost:8083
+```
+
+Login credentials:
+
+```
+username: admin
+password: admin
+```
+
+---
+
+## Populate ClickHouse with Initial CSV Data
+
+To load raw CSV files into ClickHouse, trigger the Airflow DAG:
+
+* `load_initial_csv`
+
+This DAG inserts the raw YouTube CSV data into the `raw_youtube` schema.
+
+---
+## Load Initial csv youtube_channels as iceberg table
+
+To load youtube channels into clickhouse as iceberg table, trigger the Airflow DAG:
+
+* `iceberg_bronze_layer `
+
+This DAG inserts the raw youtube_channels CSV data into the `bronze` database.
+NOTE: this is a standalone table. Downstream processes do not rely on it.
+
+---
+
+## DBT Part
+
+### Running dbt from the terminal
+
+Enter the dbt environment inside the Airflow worker:
+
+```bash
+docker exec -it dbt bash
+```
+
+Then run the full dbt pipeline:
+
+```bash
+dbt snapshot
+dbt run
+dbt test
+```
+
+---
+
+### Running dbt using Airflow
+
+You can also run the dbt transformations through Airflow by triggering these DAGs:
+* `dbt_silver_layer` — builds the Silver layer models
+* run in dbt dt shell dbt snapshot
+* `dbt_gold_layer` — builds the Gold layer models
+
+This way, your entire ELT process is orchestrated inside Airflow.
+
+# 3. ClickHouse Roles, Users, Permissions & Masking
+
+The project implements secure data access using ClickHouse roles and masked views for sensitive data fields.
+
+## Roles Created
+
+| Role                | Permissions                                  | Purpose                              |
+| ------------------- | -------------------------------------------- | ------------------------------------ |
+| **analyst_full**    | Full SELECT on all gold and analytics models | Internal analysts / engineers        |
+| **analyst_limited** | SELECT only on masked, privacy-safe views    | External analysts / restricted users |
+
+## Users Created
+
+| User                   | Role            | Password     |
+| ---------------------- | --------------- | ------------ |
+| `analyst_full_user`    | analyst_full    | `full123`    |
+| `analyst_limited_user` | analyst_limited | `lim123` |
+
+---
+## Masking Logic (What is masked, how it is masked, and why)
+
+### Columns Selected for Masking
+
+| Analytical View           | Column Masked | Masking Function                      | Reason (Demo)                                            |
+| ------------------------- | ------------- | ------------------------------------- | -------------------------------------------------------- |
+| `top_10_channels_limited` | channel_title | `toString(cityHash64(channel_title))` | Represents identity of the channel — demo-sensitive data |
+| `top_10_videos_limited`   | video_title   | `toString(cityHash64(video_title))`   | Represents title of the video — demo-sensitive data      |
+| `top_10_videos_limited`   | category_name | `toString(cityHash64(category_name))` | Added as third required masked column (dummy sensitive)  |
+
+> Note: The dataset does **not** contain real PII or confidential fields. These columns were masked **only to satisfy project requirements** that at least three fields must be pseudonymized.
+
+## How to set roles and how to use
+
+### 1. Creating Roles and Users
+
+```
+docker exec -i clickhouse clickhouse-client --user default --password password  < clickhouse/setup_access.sql
+```
+### 2. Logging into ClickHouse With Each Role
+
+
+#### Full-access user
+
+```bash
+docker exec -it clickhouse clickhouse-client --user analyst_full_user --password full123
+```
+
+#### Limited-access user
+
+```bash
+docker exec -it clickhouse clickhouse-client --user analyst_limited_user --password lim123
+```
+---
+
+### 3. Query example
+
+```sql
+SELECT * FROM youtube_dbt.top_10_channels_full LIMIT 5;
+```
+
+# 8. OpenMetadata
+
+URL:
+[http://localhost:8585](http://localhost:8585)
+
+Login:
+
+```
+admin / admin
+```
+
+Screenshot placeholder:
+
+```
+![OpenMetadata Tests](images/openmetadata_tests.png)
+```
+
+---
+
+# 10. Superset Dashboard
+
+Make sure dbt snapshot is done and after the snapshot rerun golden layer dag.
+
+URL:
+[http://localhost:8088](http://localhost:8088)
+
+Login:
+
+```
+admin / admin
+```
+
+Steps:
+
+1. Connect to ClickHouse (preconfigured)
+2. Create datasets from youtube_dbt.
+
+   *`07_top_cat_by_view`
+   *`02_top_10_videos_by_topic_category`
+   *`01_top_10_channels`
+
+3. Build dashboard with:
+
+   * at least **2 charts**
+   * at least **1 filter**
+
+The YouTube Analytics dashboard displays key metrics derived from the youtube_dbt ClickHouse database.
+
+Screenshot:
+
+![Superset Dashboard](images/superset_dashboard.jpg)
 
