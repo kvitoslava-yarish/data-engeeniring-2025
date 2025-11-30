@@ -13,6 +13,10 @@ clean-targets: ['target', 'dbt_packages']
 
 models:
   project2:
+    +persist_docs:
+      relation: true
+      columns: true
+
     +materialized: table
 
     silver:
