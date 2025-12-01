@@ -7,6 +7,7 @@ x-airflow-env: &airflow_env
   AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
   AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
   AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+  AIRFLOW__CORE__ENABLE_XCOM_PICKLING: "true"
   TZ: ${TZ}
 
 services:
@@ -51,7 +52,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db     # 👈 the critical one
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
     depends_on:
@@ -62,6 +63,7 @@ services:
     build:
       context: ./airflow
     container_name: airflow-webserver
+    user: "1000:0"
     restart: always
     environment:
       <<: *airflow_env
@@ -70,7 +72,8 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
-#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+      DBT_TARGET_PATH: /tmp/dbt_target
+    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -78,9 +81,13 @@ services:
       - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
+      - ./airflow/data:/opt/airflow/data
+    command: >
+      bash -c "mkdir -p /opt/dbt/target &&
+               chmod -R 777 /opt/dbt/target &&
+               exec airflow webserver"
     ports:
-      - "8080:8080"
-    command: [ "airflow", "webserver" ]
+      - "8083:8080"
     depends_on:
       airflow-scheduler:
         condition: service_started
@@ -89,6 +96,7 @@ services:
     build:
       context: ./airflow
     container_name: airflow-scheduler
+    user: "1000:0"
     restart: always
     environment:
       <<: *airflow_env
@@ -97,7 +105,7 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_TCP_PORT: ${CLICKHOUSE_TCP_PORT}
-#    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    #    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -105,9 +113,13 @@ services:
       - ./airflow/airflow.db:/opt/airflow/airflow.db
       - ./airflow/include:/opt/airflow/include
       - ./dbt:/opt/dbt
-    command: [ "airflow", "scheduler" ]
+      - ./airflow/data:/opt/airflow/data
+    command: >
+      bash -c "mkdir -p /opt/dbt/target &&
+               chmod -R 777 /opt/dbt/target &&
+               exec airflow scheduler"
     healthcheck:
-      test: [ "CMD-SHELL"]#, "airflow jobs check --job-type SchedulerJob --hostname ${HOSTNAME}" ]
+      test: [ "CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)" ]
       interval: 10s
       timeout: 10s
       retries: 20
@@ -117,11 +129,15 @@ services:
       clickhouse:
         condition: service_healthy
 
-  dbt:
+
+  dbt-init:
     build:
       context: ./dbt
-    container_name: dbt
+    container_name: dbt-init
+    user: "1000:1000"
     working_dir: /usr/app
+    entrypoint: /bin/bash
+    command: -c "dbt deps && dbt build"
     environment:
       TZ: ${TZ}
       DBT_TARGET: ${DBT_TARGET}
@@ -134,10 +150,36 @@ services:
       DBT_PROFILES_DIR: /usr/app/profiles
     volumes:
       - ./dbt:/usr/app
-    command: tail -f /dev/null
     depends_on:
       clickhouse:
         condition: service_healthy
+
+  dbt:
+    build:
+      context: ./dbt
+    container_name: dbt
+    user: "1000:1000"
+    working_dir: /usr/app
+    environment:
+      TZ: ${TZ}
+      DBT_TARGET: ${DBT_TARGET}
+      DBT_SCHEMA: ${DBT_SCHEMA}
+      DBT_HOST: ${DBT_HOST}
+      DBT_PORT: ${DBT_PORT}
+      DBT_USER: ${DBT_USER}
+      DBT_PASSWORD: ${DBT_PASSWORD}
+      DBT_DATABASE: ${DBT_DATABASE}
+      DBT_PROFILES_DIR: /usr/app/profiles
+      DBT_TARGET_PATH: /tmp/dbt_target
+
+    volumes:
+      - ./dbt:/usr/app
+    ports:
+      - "8081:8081"
+    command: tail -f /dev/null
+    depends_on:
+      dbt-init:
+        condition: service_completed_successfully
 
   tabix:
     image: spoonest/clickhouse-tabix-web-client:latest

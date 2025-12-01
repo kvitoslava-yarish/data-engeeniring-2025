@@ -25,7 +25,7 @@ CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 CLICKHOUSE_TCP_PORT = int(os.getenv("CLICKHOUSE_TCP_PORT"))
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 
-API_KEY = "AIzaSyA3DBoFW0B6sFeF4JMtRkTWZ2Wd_LsrLXo"
+API_KEY = ""
 
 def get_video_ids_from_playlist(playlist_id, api_key):
     logger.info(f"Fetching video IDs from playlist {playlist_id}")
@@ -142,6 +142,8 @@ def insert_batch_to_clickhouse(client, videos_data, batch_number):
         """, rows)
         logger.info(f"Batch {batch_number}: Inserted {len(rows)} videos into ClickHouse")
 
+        
+
 
 def insert_videos_to_clickhouse(**context):
     logger.info("Starting video ingestion process")
@@ -221,6 +223,10 @@ def insert_videos_to_clickhouse(**context):
 
     logger.info("Video ingestion completed successfully")
 
+    client.execute("""OPTIMIZE TABLE raw_youtube.videos""")
+
+    logger.info(f"Optimized rows in youtube.raw_youtube.videos")
+
 
 with DAG(
     dag_id="videos_to_clickhouse",
@@ -236,3 +242,4 @@ with DAG(
         python_callable=insert_videos_to_clickhouse,
         provide_context=True,
     )
+

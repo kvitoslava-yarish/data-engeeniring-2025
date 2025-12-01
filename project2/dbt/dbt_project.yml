@@ -5,6 +5,9 @@ config-version: 2
 profile: 'project2'
 
 model-paths: ['models']
+seed-paths: ['seeds']
+snapshot-paths: ['snapshots']
+analysis-paths: ['analyses']
 target-path: 'target'
 clean-targets: ['target', 'dbt_packages']
 
@@ -13,10 +16,24 @@ models:
     +materialized: table
 
     silver:
-      +schema: staging_youtube
+      +database: youtube_silver
+      +materialized: table
       +tags: ['silver']
 
     gold:
-      +schema: analytics_youtube
-      +materialized: table
+      +database: youtube_gold
+      +materialized: view
       +tags: ['gold']
+
+    analytics:
+      +database: youtube_queries
+      +materialized: view
+      +tags: [ 'analytics' ]
+
+seeds:
+  project2:
+    +database: youtube_gold
+
+snapshots:
+  project2:
+    +target_schema: youtube_gold

@@ -3,11 +3,11 @@ project2:
   outputs:
     dev:
       type: clickhouse
-      schema: "{{ env_var('DBT_SCHEMA', 'default') }}"
       host: "{{ env_var('DBT_HOST', 'clickhouse') }}"
       port: "{{ env_var('DBT_PORT', '8123') | int }}"
       user: "{{ env_var('DBT_USER', 'default') }}"
-      password: "{{ env_var('DBT_PASSWORD', '') }}"
-      database: "{{ env_var('DBT_DATABASE', 'default') }}"
+      password: "{{ env_var('DBT_PASSWORD', 'password') }}"
+      database: youtube_staging
+      schema: youtube_staging
       threads: 4
       secure: False
